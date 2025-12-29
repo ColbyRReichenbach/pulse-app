@@ -1,0 +1,200 @@
+
+import { WorkoutType, PhaseType, WorkoutSession } from './types';
+
+export const INITIAL_USER_PROFILE = {
+  name: "Athlete",
+  weight: 175,
+  maxSquat: 345,
+  maxDeadlift: 386,
+  maxBench: 245,
+  maxMileSeconds: 465, // 7:45
+  hrZone2Low: 146,
+  hrZone2High: 160,
+  hrZone5: 190,
+  startDate: new Date().toISOString(),
+};
+
+export const PHASES = [
+  { id: PhaseType.AEROBIC_BASE, name: "P1: Aerobic Base", weeks: [1, 8], description: "Expand blood volume & tendon stiffness. High volume, low intensity." },
+  { id: PhaseType.STRENGTH_THRESHOLD, name: "P2: Strength & Threshold", weeks: [9, 20], description: "Force production & Lactic tolerance. Heavier weights, uncomfortable cardio." },
+  { id: PhaseType.PEAK, name: "P3: The Peak", weeks: [21, 32], description: "Peak Power & PR attempts. Short duration, maximum intensity." },
+  { id: PhaseType.WASHOUT, name: "P4: The Washout", weeks: [33, 36], description: "Systemic recovery & Fatigue drop. Dumbbells only, training by feel." },
+  { id: PhaseType.RECALIBRATION, name: "P5: Re-calibration", weeks: [37, 52], description: "Re-test maxes & initiate new 52-week cycle." }
+];
+
+export const getWorkoutForDay = (phase: PhaseType, week: number, day: string, profile: any): WorkoutSession => {
+  const isPhase1Deload = week === 4 || week === 8;
+  const isPhase2Deload = week === 14;
+  const isDeload = isPhase1Deload || isPhase2Deload;
+
+  // Phase 1 Progression (Weeks 5-7): +5-10lbs to compound lifts
+  let p1StrengthBonus = 0;
+  if (phase === PhaseType.AEROBIC_BASE && week >= 5 && week <= 7) {
+    p1StrengthBonus = (week - 4) * 5;
+  }
+
+  switch (phase) {
+    case PhaseType.AEROBIC_BASE:
+      switch (day) {
+        case 'Monday':
+          return {
+            title: "Lower Body Hypertrophy",
+            type: WorkoutType.STRENGTH,
+            description: "High volume focus. Strictly 3 min rest.",
+            movements: [
+              { name: "Low Bar Back Squat", prescribed: `${Math.round(profile.maxSquat * (isDeload ? 0.5 : 0.7)) + p1StrengthBonus} lbs`, reps: "3x8", rpe: 7 },
+              { name: "DB Walking Lunges", prescribed: "35 lb DBs", reps: "3x12/leg" },
+              { name: "Leg Extensions", reps: "3x15", rpe: 7 }
+            ],
+            cardio: { activity: "Bike Erg Flush", durationMinutes: 15, targetHr: "130-140 bpm", notes: "Zone 1. Constant RPM. Do not sprint." }
+          };
+        case 'Tuesday':
+          return {
+            title: "Upper Push/Pull & Row",
+            type: WorkoutType.HYBRID,
+            description: "Aerobic power and antagonist strength balance.",
+            movements: [
+              { name: "Bench Press", prescribed: `${Math.round(profile.maxBench * (isDeload ? 0.5 : 0.7)) + p1StrengthBonus} lbs`, reps: "3x8" },
+              { name: "Pendlay Row", prescribed: "135 lbs", reps: "3x10", notes: "Strict form, back parallel." },
+              { name: "DB Overhead Press", prescribed: "40 lbs", reps: "3x10" }
+            ],
+            cardio: { activity: "Row Erg Intervals", durationMinutes: 20, pace: "2:15/500m", targetHr: "<140 bpm recovery", notes: "5 x 500m. 1:00 rest." }
+          };
+        case 'Wednesday':
+          // Progression: +5 mins per week (W1: 35, W2: 40, W3: 45). W4: 30.
+          let baseMinutes = 35;
+          if (week === 2) baseMinutes = 40;
+          if (week === 3) baseMinutes = 45;
+          if (week === 4) baseMinutes = 30; // W4 deload
+          if (week >= 5 && week <= 7) baseMinutes = 45 + (week - 4) * 5;
+          if (week === 8) baseMinutes = 30; // W8 deload
+
+          return {
+            title: "Pure Zone 2 Endurance",
+            type: WorkoutType.ENDURANCE,
+            description: "Strict limit: 146-160 bpm. Walk if HR hits 162.",
+            movements: [],
+            cardio: { activity: "Outdoor Run", durationMinutes: baseMinutes, targetHr: "146-160 bpm", notes: "Run as slow as needed to maintain HR zone." }
+          };
+        case 'Thursday':
+          return {
+            title: "Athleticism & Flow",
+            type: WorkoutType.METCON,
+            description: "20 Min AMRAP. 70% effort. Nasal breathing only.",
+            movements: [
+              { name: "Double Unders", reps: "10 min EMOM Skill" },
+              { name: "Power Clean", prescribed: "135 lbs", reps: "5x3", notes: "Perfect technique, fast elbows." }
+            ],
+            cardio: { activity: "Aerobic Flow", durationMinutes: 20, notes: "200m Run, 10 T2B, 15 KB Swings (53lb)." }
+          };
+        case 'Saturday':
+          return {
+            title: "Long Aerobic Rotation",
+            type: WorkoutType.ENDURANCE,
+            description: "45 Minutes Continuous Mixed Movement.",
+            movements: [],
+            cardio: { activity: "Row/Bike/Ski/Run", durationMinutes: 45, targetHr: "150 bpm average", notes: "10 min Row, 10 min Bike, 10 min Ski, 10 min Run, 5 min Cooldown." }
+          };
+        default: return { title: "Mandatory Recovery", type: WorkoutType.RECOVERY, description: "30 mins Yoga flow or static stretching.", movements: [{ name: "Yoga Flow", reps: "30 min" }] };
+      }
+
+    case PhaseType.STRENGTH_THRESHOLD:
+      // Progression: W9-12: 295. W13-16: 305. W17-19: 315.
+      let p2SquatWeight = 295;
+      if (week >= 13 && week <= 16) p2SquatWeight = 305;
+      if (week >= 17) p2SquatWeight = 315;
+
+      switch (day) {
+        case 'Monday':
+          return {
+            title: "Heavy Lower Session",
+            type: WorkoutType.STRENGTH,
+            description: "Absolute force production.",
+            movements: [
+              { name: "Back Squat", prescribed: `${isDeload ? Math.round(p2SquatWeight * 0.7) : p2SquatWeight} lbs`, reps: "5x3", notes: "Rest 3-5 mins." },
+              { name: "Deadlift", prescribed: `${isDeload ? 230 : 325} lbs`, reps: "3x3", notes: "Full reset every rep. No bouncing." },
+              { name: "Bulgarian Split Squats", prescribed: "40 lbs", reps: "3x8/leg" }
+            ]
+          };
+        case 'Tuesday':
+          // W9-12: 3x8min. W13-16: 3x10min.
+          const intervals = week >= 13 ? "3 x 10 Minutes" : "3 x 8 Minutes";
+          return {
+            title: "Threshold Intervals",
+            type: WorkoutType.ENDURANCE,
+            description: "Lactic tolerance. 2 min walking rest.",
+            movements: [],
+            cardio: { activity: "Running (Track)", durationMinutes: week >= 13 ? 40 : 35, pace: "8:45-9:00 / mile", notes: `${intervals}. Target sustained pace.` }
+          };
+        case 'Wednesday':
+          return {
+            title: "Heavy Upper Session",
+            type: WorkoutType.STRENGTH,
+            description: "Standing overhead press and weighted pulls.",
+            movements: [
+              { name: "Strict Overhead Press", prescribed: "105 lbs", reps: "5x5" },
+              { name: "Weighted Pull-ups", prescribed: "BW + 25 lbs", reps: "5x3" },
+              { name: "Weighted Dips", reps: "3x10" }
+            ]
+          };
+        case 'Saturday':
+          return {
+            title: "Tempo Run",
+            type: WorkoutType.ENDURANCE,
+            description: "Uncomfortable but sustainable.",
+            movements: [],
+            cardio: { activity: "4 Mile Run", durationMinutes: 40, pace: "8:15-8:30 pace", notes: "Mile 1 warm, Mile 2-3 Tempo, Mile 4 cool." }
+          };
+        default: return { title: "Active Flush", type: WorkoutType.RECOVERY, description: "Swimming or Easy Spin.", movements: [], cardio: { activity: "Low Impact Flush", durationMinutes: 45 } };
+      }
+
+    case PhaseType.PEAK:
+      let targetWeight = profile.maxSquat * 0.9;
+      if (week >= 25) targetWeight = profile.maxSquat * 0.95;
+      if (week >= 30) targetWeight = profile.maxSquat + 5; // PR
+
+      switch (day) {
+        case 'Monday':
+          return {
+            title: "Max Effort Lower",
+            type: WorkoutType.STRENGTH,
+            description: "Peak neurological recruitment. Building to heavy double/single.",
+            movements: [
+              { name: "Back Squat", prescribed: `${Math.round(targetWeight)} lbs`, reps: "Build to Heavy Single/Double" }
+            ],
+            cardio: { activity: "Assault Bike Sprints", durationMinutes: 20, notes: "10 Rounds: 20s MAX / 1:40 rest. 100% Watts." }
+          };
+        case 'Tuesday':
+          return {
+            title: "Track Speed (VO2 Max)",
+            type: WorkoutType.ENDURANCE,
+            description: "400m Repeats. 1:1 work:rest ratio.",
+            movements: [],
+            cardio: { activity: "8 x 400m", durationMinutes: 30, pace: "1:50-1:55/lap", notes: "7:20-7:40 mile pace equivalent." }
+          };
+        case 'Wednesday':
+          return {
+            title: "Max Effort Upper & Fran",
+            type: WorkoutType.HYBRID,
+            description: "Bench Press Single + CrossFit Benchmark.",
+            movements: [
+              { name: "Bench Press", prescribed: `${Math.round(profile.maxBench * 0.95)} lbs`, reps: "Build to Single" },
+              { name: "Thrusters", prescribed: "95 lbs", reps: "21-15-9" },
+              { name: "Pull-ups", reps: "21-15-9" }
+            ]
+          };
+        default: return { title: "Active Flush", type: WorkoutType.RECOVERY, description: "Very low intensity spin or swim.", movements: [], cardio: { activity: "Recovery Protocol", durationMinutes: 45 } };
+      }
+
+    default:
+      return { 
+        title: "Washout Recovery", 
+        type: WorkoutType.RECOVERY, 
+        description: "Drop all fatigue. Dumbbells only, nothing over 50lbs.", 
+        movements: [
+          { name: "Nature Walk", reps: "30-45 min" },
+          { name: "DB Pump (Light)", reps: "3x20" }
+        ] 
+      };
+  }
+};

@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { LayoutDashboard, Compass, Activity, UserCircle2, ChevronUp } from 'lucide-react';
+import { LayoutDashboard, Compass, Sparkles, UserCircle2, ChevronUp } from 'lucide-react';
 
 interface TabBarProps {
   activeTab: 'lab' | 'roadmap' | 'analytics' | 'settings';
@@ -12,7 +12,7 @@ const TabBar: React.FC<TabBarProps> = ({ activeTab, setActiveTab, minimized }) =
   const tabs = [
     { id: 'lab', icon: <LayoutDashboard size={22} />, label: 'Lab' },
     { id: 'roadmap', icon: <Compass size={22} />, label: 'Plan' },
-    { id: 'analytics', icon: <Activity size={22} />, label: 'Pulse' },
+    { id: 'analytics', icon: <Sparkles size={22} />, label: 'Hub' },
     { id: 'settings', icon: <UserCircle2 size={22} />, label: 'Profile' },
   ] as const;
 
@@ -24,10 +24,12 @@ const TabBar: React.FC<TabBarProps> = ({ activeTab, setActiveTab, minimized }) =
             const main = document.querySelector('main');
             if (main) main.scrollTo({ top: 0, behavior: 'smooth' });
           }}
-          className="w-14 h-14 glass-dark rounded-full border border-orange-500/30 flex items-center justify-center text-orange-500 shadow-[0_10px_30px_rgba(255,149,0,0.2)] hover:scale-110 active:scale-90 transition-all"
+          className={`w-14 h-14 glass-dark rounded-full border flex items-center justify-center shadow-2xl hover:scale-110 active:scale-90 transition-all ${
+            activeTab === 'analytics' ? 'border-indigo-500/30 text-indigo-400' : 'border-orange-500/30 text-orange-500'
+          }`}
         >
           {tabs.find(t => t.id === activeTab)?.icon}
-          <div className="absolute -top-1 -right-1 w-4 h-4 bg-orange-500 rounded-full border-2 border-black flex items-center justify-center">
+          <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-black flex items-center justify-center ${activeTab === 'analytics' ? 'bg-indigo-500' : 'bg-orange-500'}`}>
              <ChevronUp size={10} className="text-white" />
           </div>
         </button>
@@ -51,12 +53,12 @@ const TabBar: React.FC<TabBarProps> = ({ activeTab, setActiveTab, minimized }) =
             }`}
           >
             {isActive && (
-              <div className="absolute inset-0 bg-white/10 rounded-[26px] glow-active -z-10 shadow-[0_0_20px_rgba(255,255,255,0.05)]"></div>
+              <div className={`absolute inset-0 rounded-[26px] glow-active -z-10 shadow-lg ${tab.id === 'analytics' ? 'bg-indigo-500/20' : 'bg-white/10'}`}></div>
             )}
-            <div className={`transition-transform duration-300 ${isActive ? 'translate-y-[-2px]' : ''}`}>
+            <div className={`transition-transform duration-300 ${isActive ? 'translate-y-[-2px]' : ''} ${isActive && tab.id === 'analytics' ? 'text-indigo-400' : ''}`}>
               {tab.icon}
             </div>
-            <span className={`text-[9px] font-black uppercase tracking-[0.1em] mt-1 transition-all duration-300 ${isActive ? 'opacity-100 max-h-4' : 'opacity-0 max-h-0'}`}>
+            <span className={`text-[9px] font-black uppercase tracking-[0.1em] mt-1 transition-all duration-300 ${isActive ? 'opacity-100 max-h-4' : 'opacity-0 max-h-0'} ${isActive && tab.id === 'analytics' ? 'text-indigo-400' : ''}`}>
               {tab.label}
             </span>
           </button>

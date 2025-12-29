@@ -1,14 +1,15 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { INITIAL_USER_PROFILE, getWorkoutForDay } from './constants';
-import { UserProfile, PhaseType, UserProgress, WorkoutLog } from './types';
+import { UserProfile, PhaseType, UserProgress, WorkoutLog, WorkoutType } from './types';
 import LabView from './components/LabView';
 import RoadmapView from './components/RoadmapView';
-import AnalyticsView from './components/AnalyticsView';
+import IntelligenceHub from './components/IntelligenceHub';
 import SettingsView from './components/SettingsView';
 import TabBar from './components/TabBar';
 import WeeklyProgress from './components/WeeklyProgress';
 import { dbService } from './db';
+import { Trophy, Star, Zap } from 'lucide-react';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<UserProfile>(() => {
@@ -24,6 +25,7 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'lab' | 'roadmap' | 'analytics' | 'settings'>('lab');
   const [viewDate, setViewDate] = useState(new Date());
   const [isNavMinimized, setIsNavMinimized] = useState(false);
+  const [prEvent, setPrEvent] = useState<{ exercise: string, weight: number } | null>(null);
   const mainRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -79,6 +81,41 @@ const App: React.FC = () => {
     return getWorkoutForDay(currentPhase, currentWeek, dayOfWeek, user);
   }, [currentPhase, currentWeek, dayOfWeek, user]);
 
+  const detectPRs = (data: any) => {
+    const prs: { exercise: string, weight: number }[] = [];
+    
+    // Check Strength Movements
+    if (data.strength) {
+      data.strength.forEach((entry: any) => {
+        const maxSetWeight = Math.max(...entry.sets.map((s: any) => s.weight));
+        if (entry.exercise.toLowerCase().includes('squat') && maxSetWeight > user.maxSquat) {
+          prs.push({ exercise: 'Squat', weight: maxSetWeight });
+          setUser(prev => ({ ...prev, maxSquat: maxSetWeight }));
+        }
+        if (entry.exercise.toLowerCase().includes('deadlift') && maxSetWeight > user.maxDeadlift) {
+          prs.push({ exercise: 'Deadlift', weight: maxSetWeight });
+          setUser(prev => ({ ...prev, maxDeadlift: maxSetWeight }));
+        }
+        if (entry.exercise.toLowerCase().includes('bench') && maxSetWeight > user.maxBench) {
+          prs.push({ exercise: 'Bench Press', weight: maxSetWeight });
+          setUser(prev => ({ ...prev, maxBench: maxSetWeight }));
+        }
+      });
+    }
+
+    // Check Cardio (e.g. 1 Mile Run PR)
+    if (data.cardio && data.cardio.activity.toLowerCase().includes('1 mile') && data.cardio.durationSeconds < user.maxMileSeconds) {
+       prs.push({ exercise: '1 Mile Run', weight: data.cardio.durationSeconds });
+       setUser(prev => ({ ...prev, maxMileSeconds: data.cardio.durationSeconds }));
+    }
+
+    if (prs.length > 0) {
+      setPrEvent(prs[0]);
+      if ('vibrate' in navigator) navigator.vibrate([100, 50, 100, 50, 200]);
+      setTimeout(() => setPrEvent(null), 5000);
+    }
+  };
+
   const handleCompleteWorkout = async (performanceData?: any) => {
     const newLog: WorkoutLog = {
       week: currentWeek,
@@ -91,10 +128,10 @@ const App: React.FC = () => {
       }
     };
 
-    // Save to Relational DB with dynamic context
+    detectPRs(performanceData);
+
     await dbService.saveWorkout(newLog, currentPhase, currentWorkout.type, currentWorkout.title);
 
-    // Save to State for UI reactivity
     setProgress(prev => ({
       ...prev,
       completedWorkouts: { ...prev.completedWorkouts, [dateKey]: newLog }
@@ -112,6 +149,22 @@ const App: React.FC = () => {
         <div className="absolute top-[-10%] left-[-10%] w-[100%] h-[70%] bg-orange-600/5 blur-[150px] rounded-full animate-pulse"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-[80%] h-[60%] bg-blue-600/5 blur-[150px] rounded-full"></div>
       </div>
+
+      {/* PR Celebration Overlay */}
+      {prEvent && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6 animate-in zoom-in-95 duration-500 pointer-events-none">
+          <div className="glass-dark p-12 rounded-[50px] text-center space-y-4 border-orange-500/50 apple-shadow shadow-[0_0_100px_rgba(255,149,0,0.3)] bg-black/80 backdrop-blur-3xl">
+            <div className="w-24 h-24 bg-orange-500 rounded-full flex items-center justify-center mx-auto shadow-[0_0_40px_rgba(255,149,0,0.5)]">
+              <Star size={50} fill="white" className="text-white animate-spin-slow" />
+            </div>
+            <div>
+              <h2 className="text-[10px] font-black uppercase tracking-[0.5em] text-orange-500">New Personal Record</h2>
+              <h3 className="text-4xl font-black tracking-tighter mt-2">{prEvent.exercise}</h3>
+              <p className="text-5xl font-black text-white mt-4">{prEvent.weight} <span className="text-lg text-white/40 uppercase">lbs</span></p>
+            </div>
+          </div>
+        </div>
+      )}
       
       <main 
         ref={mainRef}
@@ -120,15 +173,15 @@ const App: React.FC = () => {
         <header className="mb-6 flex justify-between items-start">
           <div className="animate-in fade-in slide-in-from-left-4 duration-700">
             <div className="flex items-center gap-2 mb-1">
-              <span className="w-2.5 h-2.5 rounded-full bg-orange-500 shadow-[0_0_12px_#FF9500]"></span>
-              <p className="text-orange-500 font-black tracking-[0.2em] text-[10px] uppercase">
+              <span className={`w-2.5 h-2.5 rounded-full ${activeTab === 'analytics' ? 'bg-indigo-500 shadow-[0_0_12px_#5856D6]' : 'bg-orange-500 shadow-[0_0_12px_#FF9500]'}`}></span>
+              <p className={`font-black tracking-[0.2em] text-[10px] uppercase ${activeTab === 'analytics' ? 'text-indigo-400' : 'text-orange-500'}`}>
                 {todayLabel}
               </p>
             </div>
             <h1 className="text-4xl font-black tracking-tighter text-white leading-none mt-2">
               {activeTab === 'lab' ? 'The Lab' : 
                activeTab === 'roadmap' ? 'Roadmap' : 
-               activeTab === 'analytics' ? 'Pulse' : 'Profile'}
+               activeTab === 'analytics' ? 'Insights' : 'Profile'}
             </h1>
             <p className="text-white/30 text-[10px] font-black uppercase tracking-widest mt-1">
               Week {currentWeek} • Phase {currentPhase}
@@ -170,7 +223,7 @@ const App: React.FC = () => {
           )}
 
           {activeTab === 'analytics' && (
-            <AnalyticsView completedWorkouts={progress.completedWorkouts} profile={user} />
+            <IntelligenceHub user={user} history={progress.completedWorkouts} />
           )}
 
           {activeTab === 'settings' && (

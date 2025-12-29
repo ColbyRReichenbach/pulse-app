@@ -77,7 +77,7 @@ export interface PerformanceData {
   cardio?: CardioEntry;
   metcon?: MetConEntry;
   recoveryNote?: string;
-  yogaDone?: boolean; // Specific flag for simplified recovery tracking
+  yogaDone?: boolean;
   syncedFromWatch: boolean;
   timestamp: string;
 }
@@ -93,4 +93,13 @@ export interface WorkoutLog {
 export interface UserProgress {
   currentWeek: number;
   completedWorkouts: Record<string, WorkoutLog>; // Key: date (YYYY-MM-DD)
+}
+
+// AI Specific Types
+export interface AIInsight {
+  message: string;
+  chartData?: any[];
+  chartType?: 'BAR' | 'LINE' | 'AREA';
+  recommendation?: string;
+  isPR?: boolean;
 }

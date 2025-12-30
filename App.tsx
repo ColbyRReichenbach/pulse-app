@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { INITIAL_USER_PROFILE, getWorkoutForDay } from './constants';
 import { UserProfile, PhaseType, UserProgress, WorkoutLog, WorkoutType } from './types';
@@ -37,7 +36,6 @@ const App: React.FC = () => {
 
   const handleScroll = (e: React.UIEvent<HTMLElement>) => {
     const top = e.currentTarget.scrollTop;
-    // Tighter threshold for native iOS "Lightning Smooth" feel
     if (top > 20 && !isNavMinimized) setIsNavMinimized(true);
     if (top <= 20 && isNavMinimized) setIsNavMinimized(false);
   };

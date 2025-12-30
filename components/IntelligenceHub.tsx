@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, Type } from "@google/genai";
 import { UserProfile, WorkoutLog } from '../types';
@@ -35,7 +34,7 @@ const IntelligenceHub: React.FC<IntelligenceHubProps> = ({ user, history }) => {
     setLoading(true);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       
       // Fetch data for context
       const sessions = await dbService.getAllSessions();

@@ -7,7 +7,6 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Hybrid Pro">
-  <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="https://img.icons8.com/ios-filled/512/FFFFFF/weightlift.png">
   <title>Hybrid Performance Pro</title>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -17,7 +16,6 @@
       --apple-blue: #007AFF;
       --apple-orange: #FF9500;
       --apple-indigo: #5856D6;
-      --spring-easing: cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -29,7 +27,6 @@
       padding: 0;
       padding-top: env(safe-area-inset-top);
       padding-bottom: env(safe-area-inset-bottom);
-      transition: background-color 1s ease;
     }
     .glass {
       background: rgba(255, 255, 255, 0.06);
@@ -43,44 +40,23 @@
       -webkit-backdrop-filter: blur(25px);
       border: 1px solid rgba(255, 255, 255, 0.08);
     }
-    .apple-shadow {
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+    .mesh-bg {
+      background: linear-gradient(-45deg, #0A0A14, #1A1A2E, #2D1B4E, #3D1200);
+      background-size: 400% 400%;
+      animation: mesh-gradient 20s ease infinite;
     }
     @keyframes mesh-gradient {
       0% { background-position: 0% 50%; }
       50% { background-position: 100% 50%; }
       100% { background-position: 0% 50%; }
     }
-    .mesh-bg {
-      background: linear-gradient(-45deg, #0A0A14, #1A1A2E, #2D1B4E, #3D1200);
-      background-size: 400% 400%;
-      animation: mesh-gradient 20s ease infinite;
-    }
-    .phase-aerobic { background-color: #050510; }
-    .phase-strength { background-color: #0d0600; }
-    .phase-peak { background-color: #0b0510; }
-    .phase-washout { background-color: #050505; }
-    .spring-nav {
-      transition: transform 0.6s var(--spring-easing), opacity 0.4s ease;
-    }
-    .hide-scrollbar::-webkit-scrollbar {
-      display: none;
-    }
-    .hide-scrollbar {
-      -ms-overflow-style: none;
-      scrollbar-width: none;
-    }
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     @keyframes pulse-glow {
       0%, 100% { opacity: 0.5; transform: scale(1); }
       50% { opacity: 0.8; transform: scale(1.05); }
     }
-    .glow-active {
-      animation: pulse-glow 3s ease-in-out infinite;
-    }
-    .active-scale:active {
-      transform: scale(0.96);
-      transition: transform 0.1s ease;
-    }
+    .glow-active { animation: pulse-glow 3s ease-in-out infinite; }
   </style>
 <script type="importmap">
 {
@@ -92,7 +68,8 @@
     "recharts": "https://esm.sh/recharts@^3.6.0",
     "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
     "vite": "https://esm.sh/vite@^7.3.0",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
+    "@capacitor/cli": "https://esm.sh/@capacitor/cli@^8.0.0"
   }
 }
 </script>

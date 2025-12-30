@@ -1,14 +1,12 @@
 {
   "name": "Hybrid Performance Pro",
-  "description": "A high-fidelity, Apple-aesthetic fitness tracker for managing elite 52-week hybrid periodization programs, integrating strength and endurance metrics with a liquid-glass UI.",
+  "description": "A high-fidelity fitness tracker for managing elite 52-week hybrid periodization programs.",
   "requestFramePermissions": [
-    "camera",
-    "microphone",
     "geolocation"
   ],
   "iosPermissions": {
     "NSHealthShareUsageDescription": "Hybrid Pro needs access to your heart rate and workout data to calculate splits and recovery scores.",
     "NSHealthUpdateUsageDescription": "Hybrid Pro will log your completed workouts to your Apple Health rings.",
-    "NSMotionUsageDescription": "Used to track step count during Zone 2 outdoor runs."
+    "NSMotionUsageDescription": "Used to track step count and running cadence during Zone 2 outdoor runs."
   }
 }

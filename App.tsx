@@ -37,8 +37,9 @@ const App: React.FC = () => {
 
   const handleScroll = (e: React.UIEvent<HTMLElement>) => {
     const top = e.currentTarget.scrollTop;
-    if (top > 40 && !isNavMinimized) setIsNavMinimized(true);
-    if (top <= 40 && isNavMinimized) setIsNavMinimized(false);
+    // Tighter threshold for native iOS "Lightning Smooth" feel
+    if (top > 20 && !isNavMinimized) setIsNavMinimized(true);
+    if (top <= 20 && isNavMinimized) setIsNavMinimized(false);
   };
 
   useEffect(() => {
@@ -109,7 +110,7 @@ const App: React.FC = () => {
         </div>
       )}
       
-      <main ref={mainRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-6 pt-16 pb-40 hide-scrollbar z-10 relative scroll-smooth">
+      <main ref={mainRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-6 pt-16 pb-48 hide-scrollbar z-10 relative scroll-smooth">
         <header className="mb-6 flex justify-between items-start">
           <div>
             <div className="flex items-center gap-2 mb-1">

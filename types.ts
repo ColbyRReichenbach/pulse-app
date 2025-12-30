@@ -35,6 +35,7 @@ export interface Movement {
   sets?: number;
   rpe?: number;
   notes?: string;
+  isSkill?: boolean; // New: To distinguish skill/warmup from load-bearing sets
 }
 
 export interface WorkoutSession {
@@ -53,6 +54,7 @@ export interface WorkoutSession {
 
 export interface StrengthEntry {
   exercise: string;
+  isSkill: boolean;
   sets: { weight: number; reps: number; completed: boolean }[];
 }
 

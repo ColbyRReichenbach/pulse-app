@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { WorkoutSession, UserProfile, PhaseType, WorkoutType, PerformanceData, StrengthEntry } from '../types';
-import { Dumbbell, Zap, Heart, Info, CheckCircle2, PlayCircle, Watch, Smartphone, Trophy, Flame, Activity } from 'lucide-react';
+import { WorkoutSession, UserProfile, PhaseType, WorkoutType, StrengthEntry, MetConEntry } from '../types';
+import { Dumbbell, Heart, CheckCircle2, PlayCircle, Watch, Trophy, Activity, Timer, ArrowRight, Hash, Ruler, ClipboardList } from 'lucide-react';
 
 interface LabViewProps {
   workout: WorkoutSession;
@@ -15,26 +15,34 @@ interface LabViewProps {
 const LabView: React.FC<LabViewProps> = ({ workout, week, phase, user, isCompleted, onComplete }) => {
   const [sessionActive, setSessionActive] = useState(false);
   const [strengthEntries, setStrengthEntries] = useState<StrengthEntry[]>([]);
+  const [metconData, setMetconData] = useState<MetConEntry>({ format: '', rounds: 0, reps: 0 });
+  const [manualDistance, setManualDistance] = useState<string>('');
   const [syncing, setSyncing] = useState(false);
   const [watchData, setWatchData] = useState<any | null>(null);
   const [yogaDone, setYogaDone] = useState(false);
 
   useEffect(() => {
-    // Initialize entries
     const initial = workout.movements.map(m => {
-      const setsCount = phase === PhaseType.PEAK ? 1 : parseInt(m.reps?.split('x')[0] || "3");
+      const isSkill = !!m.isSkill;
+      // Handle reps parsing carefully
+      const repsParts = m.reps?.split('x') || ["1", "8"];
+      const setsCount = isSkill ? 1 : (phase === PhaseType.PEAK && workout.title.includes("Max Effort") ? 5 : parseInt(repsParts[0] || "3"));
+      
       return {
         exercise: m.name,
+        isSkill: isSkill,
         sets: Array.from({ length: setsCount }).map(() => ({
           weight: parseInt(m.prescribed?.replace(/\D/g, '') || "0"),
-          reps: parseInt(m.reps?.split('x')[1] || "8"),
+          reps: parseInt(repsParts[1] || (m.reps?.includes('EMOM') ? "1" : "8")),
           completed: false
         }))
       };
     });
     setStrengthEntries(initial);
+    setMetconData({ format: workout.cardio?.activity?.includes('AMRAP') ? 'AMRAP' : (workout.cardio?.activity?.includes('RFT') ? 'RFT' : 'Session'), rounds: 0, reps: 0 });
     setSessionActive(false);
     setWatchData(null);
+    setManualDistance('');
     setYogaDone(false);
   }, [workout, phase]);
 
@@ -57,7 +65,6 @@ const LabView: React.FC<LabViewProps> = ({ workout, week, phase, user, isComplet
 
   const simulateWatchSync = () => {
     setSyncing(true);
-    // Simulate iOS HealthKit Handshake
     setTimeout(() => {
       setSyncing(false);
       setWatchData({ 
@@ -72,13 +79,41 @@ const LabView: React.FC<LabViewProps> = ({ workout, week, phase, user, isComplet
 
   const isRelationalComplete = () => {
     if (workout.type === WorkoutType.RECOVERY) return yogaDone;
-    if (strengthEntries.length === 0) {
-       if (workout.movements.length > 0) return false;
-       return workout.cardio ? !!watchData : true;
+    
+    // Check if movements are done
+    const strengthComplete = strengthEntries.every(e => e.sets.every(s => s.completed));
+    
+    // For MetCon or workouts with AMRAP/RFT, require round/rep input
+    if (workout.type === WorkoutType.METCON || (workout.cardio && (workout.cardio.activity.includes('AMRAP') || workout.cardio.activity.includes('RFT')))) {
+       return strengthComplete && (metconData.rounds > 0 || metconData.reps > 0);
     }
-    if (phase === PhaseType.PEAK) return strengthEntries.every(e => e.sets.every(s => s.completed && s.weight > 0));
-    if (workout.movements.length === 0) return !!watchData;
-    return strengthEntries.every(e => e.sets.every(s => s.completed));
+
+    // For Endurance, require either Watch sync or manual distance
+    if (workout.type === WorkoutType.ENDURANCE) {
+       return (!!watchData || manualDistance !== '');
+    }
+
+    return strengthComplete;
+  };
+
+  const handleCommit = () => {
+    const performanceData = {
+      strength: strengthEntries,
+      cardio: watchData ? {
+        ...watchData,
+        distanceMeters: manualDistance ? parseFloat(manualDistance) * 1609.34 : undefined,
+        durationSeconds: watchData.duration * 60,
+        activity: workout.cardio?.activity || 'Unknown'
+      } : (manualDistance ? {
+        activity: workout.cardio?.activity || 'Manual Entry',
+        distanceMeters: parseFloat(manualDistance) * 1609.34,
+        durationSeconds: (workout.cardio?.durationMinutes || 0) * 60
+      } : undefined),
+      metcon: (workout.type === WorkoutType.METCON || (workout.cardio && (workout.cardio.activity.includes('AMRAP') || workout.cardio.activity.includes('RFT')))) ? metconData : undefined,
+      yogaDone,
+      syncedFromWatch: !!watchData
+    };
+    onComplete(performanceData);
   };
 
   if (isCompleted) {
@@ -101,7 +136,7 @@ const LabView: React.FC<LabViewProps> = ({ workout, week, phase, user, isComplet
            </div>
            <div className="w-px h-8 bg-white/10"></div>
            <div className="text-center">
-             <p className="text-xl font-black text-orange-500">+{strengthEntries.length * 3 + 10}</p>
+             <p className="text-xl font-black text-orange-500">+{strengthEntries.length * 3 + 15}</p>
              <p className="text-[8px] font-black uppercase text-white/20 tracking-widest">Hybrid XP</p>
            </div>
         </div>
@@ -111,22 +146,19 @@ const LabView: React.FC<LabViewProps> = ({ workout, week, phase, user, isComplet
 
   return (
     <div className="space-y-6 pb-20 animate-in fade-in slide-in-from-bottom-6 duration-700">
-      {/* iOS Dynamic Readiness Hub */}
-      <div className="glass p-6 rounded-[34px] flex items-center gap-5 border-orange-500/20 apple-shadow">
-        <div className="relative shrink-0">
-          <div className="w-16 h-16 bg-orange-500/10 rounded-3xl flex items-center justify-center text-orange-500 shadow-inner">
-            <Activity size={30} className="animate-pulse" />
+      {/* Target Insights */}
+      {sessionActive && (workout.cardio?.pace || workout.cardio?.targetHr) && (
+        <div className="glass p-5 rounded-[30px] border-blue-500/20 bg-blue-500/5 flex items-center justify-between animate-in slide-in-from-top-4">
+          <div className="flex items-center gap-3">
+            <Timer size={18} className="text-blue-400" />
+            <div>
+              <p className="text-[9px] font-black uppercase text-blue-400 tracking-widest">Target Split/Intensity</p>
+              <p className="text-sm font-bold text-white">{workout.cardio.pace || workout.cardio.targetHr}</p>
+            </div>
           </div>
+          <ArrowRight size={16} className="text-blue-500/40" />
         </div>
-        <div className="flex-1">
-          <div className="flex justify-between items-center mb-1">
-            <p className="text-[10px] font-black uppercase text-orange-500 tracking-[0.2em]">Live Biometrics</p>
-            <span className="text-[10px] font-black text-green-500 px-2 py-0.5 rounded-full bg-green-500/10">Active</span>
-          </div>
-          <h3 className="text-sm font-bold text-white mb-1">Systemic Readiness: 92%</h3>
-          <p className="text-[10px] text-white/30 leading-tight">Sleep & HRV relay confirmed via Watch sync.</p>
-        </div>
-      </div>
+      )}
 
       <div className="glass-dark p-8 rounded-[44px] apple-shadow relative overflow-hidden border border-white/5">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-500 via-purple-500 to-blue-500 opacity-50"></div>
@@ -190,28 +222,45 @@ const LabView: React.FC<LabViewProps> = ({ workout, week, phase, user, isComplet
                     <div className="space-y-3">
                       {entry.sets.map((set, sIdx) => (
                         <div key={sIdx} className="flex gap-3 items-center group">
-                          <div className="flex-1 glass bg-white/[0.03] rounded-2xl px-5 py-3.5 flex items-center justify-between border-white/5 focus-within:border-orange-500/40 transition-all">
-                            <div className="flex flex-col">
-                              <span className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1">Set {sIdx + 1}</span>
-                              <input 
-                                type="number" 
-                                pattern="[0-9]*"
-                                inputMode="numeric"
-                                value={set.weight}
-                                onChange={(e) => updateWeight(mIdx, sIdx, e.target.value)}
-                                className="bg-transparent text-xl font-black w-24 outline-none text-white focus:text-orange-500"
-                              />
-                            </div>
-                            <span className="text-[10px] font-black text-white/20 uppercase">LBS</span>
-                          </div>
-                          <button 
-                            onClick={() => toggleSet(mIdx, sIdx)}
-                            className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all active:scale-90 ${
-                              set.completed ? 'bg-orange-500 text-white shadow-xl scale-105' : 'bg-white/5 text-white/10 border border-white/10'
-                            }`}
-                          >
-                            {phase === PhaseType.PEAK ? <Flame size={24} /> : <CheckCircle2 size={24} />}
-                          </button>
+                          {entry.isSkill ? (
+                             <button 
+                              onClick={() => toggleSet(mIdx, sIdx)}
+                              className={`flex-1 glass rounded-2xl px-6 py-5 flex items-center justify-between transition-all active:scale-[0.98] ${
+                                set.completed ? 'bg-orange-500 border-transparent text-white' : 'bg-white/[0.03] border-white/5 text-white/60'
+                              }`}
+                             >
+                               <div className="flex flex-col items-start">
+                                 <span className="text-[8px] font-black uppercase tracking-widest opacity-40 mb-1">Skill Set</span>
+                                 <span className="text-sm font-black uppercase tracking-widest">Commit Movement</span>
+                               </div>
+                               <CheckCircle2 size={20} className={set.completed ? 'text-white' : 'text-white/10'} />
+                             </button>
+                          ) : (
+                            <>
+                              <div className="flex-1 glass bg-white/[0.03] rounded-2xl px-5 py-3.5 flex items-center justify-between border-white/5 focus-within:border-orange-500/40 transition-all">
+                                <div className="flex flex-col">
+                                  <span className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1">Set {sIdx + 1}</span>
+                                  <input 
+                                    type="number" 
+                                    pattern="[0-9]*"
+                                    inputMode="numeric"
+                                    value={set.weight}
+                                    onChange={(e) => updateWeight(mIdx, sIdx, e.target.value)}
+                                    className="bg-transparent text-xl font-black w-24 outline-none text-white focus:text-orange-500"
+                                  />
+                                </div>
+                                <span className="text-[10px] font-black text-white/20 uppercase">LBS</span>
+                              </div>
+                              <button 
+                                onClick={() => toggleSet(mIdx, sIdx)}
+                                className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all active:scale-90 ${
+                                  set.completed ? 'bg-orange-500 text-white shadow-xl scale-105' : 'bg-white/5 text-white/10 border border-white/10'
+                                }`}
+                              >
+                                <CheckCircle2 size={24} />
+                              </button>
+                            </>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -220,14 +269,45 @@ const LabView: React.FC<LabViewProps> = ({ workout, week, phase, user, isComplet
               </div>
             )}
 
+            {(workout.type === WorkoutType.METCON || (workout.cardio && (workout.cardio.activity.includes('AMRAP') || workout.cardio.activity.includes('RFT')))) && (
+               <div className="mt-8 glass p-6 rounded-[34px] border-orange-500/20 bg-orange-500/[0.03] space-y-6">
+                 <div className="flex items-center gap-3">
+                   <ClipboardList size={20} className="text-orange-500" />
+                   <span className="text-[11px] font-black uppercase text-orange-500 tracking-widest">MetCon Performance</span>
+                 </div>
+                 <div className="grid grid-cols-2 gap-4">
+                   <div className="space-y-2">
+                     <label className="text-[9px] font-black uppercase tracking-widest text-white/30">Total Rounds</label>
+                     <input 
+                        type="number" 
+                        value={metconData.rounds || ''} 
+                        onChange={(e) => setMetconData({...metconData, rounds: parseInt(e.target.value) || 0})}
+                        placeholder="0"
+                        className="w-full glass bg-black/40 rounded-2xl px-5 py-4 text-2xl font-black text-white outline-none focus:border-orange-500/50 transition-all"
+                     />
+                   </div>
+                   <div className="space-y-2">
+                     <label className="text-[9px] font-black uppercase tracking-widest text-white/30">Add. Reps</label>
+                     <input 
+                        type="number" 
+                        value={metconData.reps || ''} 
+                        onChange={(e) => setMetconData({...metconData, reps: parseInt(e.target.value) || 0})}
+                        placeholder="0"
+                        className="w-full glass bg-black/40 rounded-2xl px-5 py-4 text-2xl font-black text-white outline-none focus:border-orange-500/50 transition-all"
+                     />
+                   </div>
+                 </div>
+               </div>
+            )}
+
             {workout.cardio && (
-              <div className="mt-8 glass p-6 rounded-[34px] border-blue-500/20 bg-blue-500/[0.03] animate-in slide-in-from-bottom-4">
-                <div className="flex justify-between items-center mb-6">
+              <div className="mt-8 glass p-6 rounded-[34px] border-blue-500/20 bg-blue-500/[0.03] animate-in slide-in-from-bottom-4 space-y-6">
+                <div className="flex justify-between items-center">
                    <div className="flex items-center gap-3">
                      <div className="w-10 h-10 bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-400">
                         <Watch size={20} />
                      </div>
-                     <span className="text-[11px] font-black uppercase text-blue-400 tracking-widest">Watch Relay</span>
+                     <span className="text-[11px] font-black uppercase text-blue-400 tracking-widest">Health Relay</span>
                    </div>
                    {watchData ? (
                      <div className="flex items-center gap-2 text-green-500 text-[10px] font-black uppercase">
@@ -245,12 +325,35 @@ const LabView: React.FC<LabViewProps> = ({ workout, week, phase, user, isComplet
                    )}
                 </div>
                 
-                <h4 className="text-xl font-black tracking-tight mb-2">{workout.cardio.activity}</h4>
-                <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest mb-6">{workout.cardio.notes}</p>
+                <div>
+                  <h4 className="text-xl font-black tracking-tight mb-2">{workout.cardio.activity}</h4>
+                  <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">{workout.cardio.notes}</p>
+                </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                {/* Only show distance input if not a pure round-based Metcon */}
+                {!(workout.cardio.activity.includes('AMRAP') || workout.cardio.activity.includes('RFT')) && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <label className="text-[9px] font-black uppercase tracking-widest text-white/30">Manual Distance Override</label>
+                      <Ruler size={14} className="text-white/20" />
+                    </div>
+                    <div className="relative">
+                      <input 
+                        type="number" 
+                        step="0.01"
+                        value={manualDistance} 
+                        onChange={(e) => setManualDistance(e.target.value)}
+                        placeholder="Enter miles..."
+                        className="w-full glass bg-black/40 rounded-2xl px-5 py-4 text-xl font-black text-white outline-none focus:border-blue-500/50 transition-all placeholder:text-white/10"
+                      />
+                      <span className="absolute right-5 top-1/2 -translate-y-1/2 text-[10px] font-black text-white/20 uppercase tracking-widest">MILES</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4 pt-2">
                    <div className="p-4 bg-black/40 rounded-2xl border border-white/5 flex flex-col justify-between">
-                      <p className="text-[9px] text-white/30 uppercase font-black tracking-widest">Time</p>
+                      <p className="text-[9px] text-white/30 uppercase font-black tracking-widest">Target Time</p>
                       <p className="text-xl font-black">{watchData?.duration || workout.cardio.durationMinutes} <span className="text-[10px] font-bold text-white/20">MIN</span></p>
                    </div>
                    <div className="p-4 bg-black/40 rounded-2xl border border-white/5 flex flex-col justify-between">
@@ -262,7 +365,7 @@ const LabView: React.FC<LabViewProps> = ({ workout, week, phase, user, isComplet
             )}
 
             <button 
-              onClick={() => onComplete({ strength: strengthEntries, cardio: watchData, yogaDone, syncedFromWatch: !!watchData })}
+              onClick={handleCommit}
               disabled={!isRelationalComplete()}
               className={`w-full py-6 text-sm font-black rounded-3xl apple-shadow uppercase tracking-[0.3em] transition-all active:scale-95 ${
                 isRelationalComplete() 
@@ -274,16 +377,6 @@ const LabView: React.FC<LabViewProps> = ({ workout, week, phase, user, isComplet
             </button>
           </div>
         )}
-      </div>
-
-      <div className="p-6 rounded-[34px] bg-white/[0.02] border border-white/5 flex gap-4">
-        <Info size={20} className="text-white/20 shrink-0" />
-        <div className="space-y-1">
-          <p className="text-[10px] font-black uppercase text-white/20 tracking-widest">Local-First Persistence</p>
-          <p className="text-[10px] text-white/40 leading-relaxed italic">
-            This session is being recorded to your iPhone's hardware storage. No external server required.
-          </p>
-        </div>
       </div>
     </div>
   );

@@ -12,10 +12,8 @@ import { dbService } from './db';
 import { Trophy, Star, Zap } from 'lucide-react';
 
 const App: React.FC = () => {
-  const [user, setUser] = useState<UserProfile>(() => {
-    const saved = localStorage.getItem('hpp_user');
-    return saved ? JSON.parse(saved) : INITIAL_USER_PROFILE;
-  });
+  const [user, setUser] = useState<UserProfile>(INITIAL_USER_PROFILE);
+  const [loading, setLoading] = useState(true);
 
   const [progress, setProgress] = useState<UserProgress>(() => {
     const saved = localStorage.getItem('hpp_progress');
@@ -29,23 +27,39 @@ const App: React.FC = () => {
   const mainRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    dbService.init().catch(console.error);
-  }, []);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      if (!mainRef.current) return;
-      const scrollTop = mainRef.current.scrollTop;
-      setIsNavMinimized(scrollTop > 40);
+    const initDb = async () => {
+      await dbService.init();
+      const savedProfile = await dbService.getProfile();
+      if (savedProfile) {
+        setUser(savedProfile);
+      }
+      setLoading(false);
     };
-    const main = mainRef.current;
-    if (main) main.addEventListener('scroll', handleScroll);
-    return () => main?.removeEventListener('scroll', handleScroll);
+    initDb();
   }, []);
 
+  const handleMainScroll = (e: React.UIEvent<HTMLElement>) => {
+    const scrollTop = e.currentTarget.scrollTop;
+    const threshold = 40;
+    if (scrollTop > threshold && !isNavMinimized) {
+      setIsNavMinimized(true);
+    } else if (scrollTop <= threshold && isNavMinimized) {
+      setIsNavMinimized(false);
+    }
+  };
+
   useEffect(() => {
-    localStorage.setItem('hpp_user', JSON.stringify(user));
-  }, [user]);
+    setIsNavMinimized(false);
+    if (mainRef.current) {
+      mainRef.current.scrollTo({ top: 0, behavior: 'instant' });
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (!loading) {
+      dbService.saveProfile(user);
+    }
+  }, [user, loading]);
 
   useEffect(() => {
     localStorage.setItem('hpp_progress', JSON.stringify(progress));
@@ -77,14 +91,22 @@ const App: React.FC = () => {
     return PhaseType.AEROBIC_BASE;
   }, [currentWeek]);
 
+  const phaseColorClass = useMemo(() => {
+    switch (currentPhase) {
+      case PhaseType.AEROBIC_BASE: return 'phase-aerobic';
+      case PhaseType.STRENGTH_THRESHOLD: return 'phase-strength';
+      case PhaseType.PEAK: return 'phase-peak';
+      case PhaseType.WASHOUT: return 'phase-washout';
+      default: return '';
+    }
+  }, [currentPhase]);
+
   const currentWorkout = useMemo(() => {
     return getWorkoutForDay(currentPhase, currentWeek, dayOfWeek, user);
   }, [currentPhase, currentWeek, dayOfWeek, user]);
 
   const detectPRs = (data: any) => {
     const prs: { exercise: string, weight: number }[] = [];
-    
-    // Check Strength Movements
     if (data.strength) {
       data.strength.forEach((entry: any) => {
         const maxSetWeight = Math.max(...entry.sets.map((s: any) => s.weight));
@@ -102,13 +124,10 @@ const App: React.FC = () => {
         }
       });
     }
-
-    // Check Cardio (e.g. 1 Mile Run PR)
     if (data.cardio && data.cardio.activity.toLowerCase().includes('1 mile') && data.cardio.durationSeconds < user.maxMileSeconds) {
        prs.push({ exercise: '1 Mile Run', weight: data.cardio.durationSeconds });
        setUser(prev => ({ ...prev, maxMileSeconds: data.cardio.durationSeconds }));
     }
-
     if (prs.length > 0) {
       setPrEvent(prs[0]);
       if ('vibrate' in navigator) navigator.vibrate([100, 50, 100, 50, 200]);
@@ -122,35 +141,28 @@ const App: React.FC = () => {
       day: dayOfWeek,
       date: dateKey,
       completed: true,
-      performanceData: {
-        ...performanceData,
-        timestamp: new Date().toISOString()
-      }
+      performanceData: { ...performanceData, timestamp: new Date().toISOString() }
     };
-
     detectPRs(performanceData);
-
     await dbService.saveWorkout(newLog, currentPhase, currentWorkout.type, currentWorkout.title);
-
     setProgress(prev => ({
       ...prev,
       completedWorkouts: { ...prev.completedWorkouts, [dateKey]: newLog }
     }));
-
     if ('vibrate' in navigator) navigator.vibrate([10, 30, 10, 50]);
   };
 
   const isCompleted = !!progress.completedWorkouts[dateKey];
 
+  if (loading) return null;
+
   return (
-    <div className="flex flex-col h-screen max-w-lg mx-auto relative overflow-hidden bg-black selection:bg-orange-500/30">
+    <div className={`flex flex-col h-screen max-w-lg mx-auto relative overflow-hidden bg-black selection:bg-orange-500/30 transition-colors duration-1000 ${phaseColorClass}`}>
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute top-[-20%] left-[-20%] w-[120%] h-[120%] opacity-20 mesh-bg blur-[100px]"></div>
-        <div className="absolute top-[-10%] left-[-10%] w-[100%] h-[70%] bg-orange-600/5 blur-[150px] rounded-full animate-pulse"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[80%] h-[60%] bg-blue-600/5 blur-[150px] rounded-full"></div>
+        <div className="absolute top-[-10%] left-[-10%] w-[100%] h-[70%] bg-white/5 blur-[150px] rounded-full animate-pulse"></div>
       </div>
 
-      {/* PR Celebration Overlay */}
       {prEvent && (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6 animate-in zoom-in-95 duration-500 pointer-events-none">
           <div className="glass-dark p-12 rounded-[50px] text-center space-y-4 border-orange-500/50 apple-shadow shadow-[0_0_100px_rgba(255,149,0,0.3)] bg-black/80 backdrop-blur-3xl">
@@ -160,7 +172,10 @@ const App: React.FC = () => {
             <div>
               <h2 className="text-[10px] font-black uppercase tracking-[0.5em] text-orange-500">New Personal Record</h2>
               <h3 className="text-4xl font-black tracking-tighter mt-2">{prEvent.exercise}</h3>
-              <p className="text-5xl font-black text-white mt-4">{prEvent.weight} <span className="text-lg text-white/40 uppercase">lbs</span></p>
+              <p className="text-5xl font-black text-white mt-4">
+                {prEvent.exercise.includes('Mile') ? `${Math.floor(prEvent.weight / 60)}:${(prEvent.weight % 60).toString().padStart(2, '0')}` : prEvent.weight} 
+                <span className="text-lg text-white/40 uppercase ml-1">{prEvent.exercise.includes('Mile') ? 'MIN' : 'LBS'}</span>
+              </p>
             </div>
           </div>
         </div>
@@ -168,7 +183,8 @@ const App: React.FC = () => {
       
       <main 
         ref={mainRef}
-        className="flex-1 overflow-y-auto px-6 pt-16 pb-40 hide-scrollbar z-10 relative scroll-smooth"
+        onScroll={handleMainScroll}
+        className="flex-1 overflow-y-auto px-6 pt-16 pb-40 hide-scrollbar z-10 relative scroll-smooth transition-transform duration-500"
       >
         <header className="mb-6 flex justify-between items-start">
           <div className="animate-in fade-in slide-in-from-left-4 duration-700">
@@ -178,7 +194,7 @@ const App: React.FC = () => {
                 {todayLabel}
               </p>
             </div>
-            <h1 className="text-4xl font-black tracking-tighter text-white leading-none mt-2">
+            <h1 className="text-4xl font-black tracking-tighter text-white leading-none mt-2 transition-all duration-300">
               {activeTab === 'lab' ? 'The Lab' : 
                activeTab === 'roadmap' ? 'Roadmap' : 
                activeTab === 'analytics' ? 'Insights' : 'Profile'}
@@ -202,7 +218,7 @@ const App: React.FC = () => {
           />
         )}
 
-        <div key={activeTab} className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div key={activeTab} className="animate-in fade-in slide-in-from-bottom-4 duration-500 spring-nav">
           {activeTab === 'lab' && (
             <LabView 
               workout={currentWorkout} 
@@ -219,6 +235,7 @@ const App: React.FC = () => {
               currentWeek={currentWeek} 
               profile={user} 
               completedWorkouts={progress.completedWorkouts}
+              onSubViewScroll={(min) => setIsNavMinimized(min)}
             />
           )}
 
@@ -236,6 +253,10 @@ const App: React.FC = () => {
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
         minimized={isNavMinimized}
+        onToggle={() => {
+          setIsNavMinimized(false);
+          mainRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
       />
     </div>
   );

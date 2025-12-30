@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { WorkoutSession, UserProfile, PhaseType, WorkoutType, StrengthEntry, MetConEntry } from '../types';
-import { Dumbbell, Heart, CheckCircle2, PlayCircle, Watch, Trophy, Activity, Timer, ArrowRight, Hash, Ruler, ClipboardList } from 'lucide-react';
+import { WorkoutSession, UserProfile, PhaseType, WorkoutType, StrengthEntry, MetConEntry, SetEntry } from '../types';
+import { Dumbbell, Heart, CheckCircle2, PlayCircle, Watch, Trophy, Activity, Timer, ArrowRight, Hash, Ruler, ClipboardList, Sparkles } from 'lucide-react';
 
 interface LabViewProps {
   workout: WorkoutSession;
@@ -24,18 +24,27 @@ const LabView: React.FC<LabViewProps> = ({ workout, week, phase, user, isComplet
   useEffect(() => {
     const initial = workout.movements.map(m => {
       const isSkill = !!m.isSkill;
-      // Handle reps parsing carefully
       const repsParts = m.reps?.split('x') || ["1", "8"];
       const setsCount = isSkill ? 1 : (phase === PhaseType.PEAK && workout.title.includes("Max Effort") ? 5 : parseInt(repsParts[0] || "3"));
       
+      const workSets: SetEntry[] = Array.from({ length: setsCount }).map(() => ({
+        weight: parseInt(m.prescribed?.replace(/\D/g, '') || "0"),
+        reps: parseInt(repsParts[1] || (m.reps?.includes('EMOM') ? "1" : "8")),
+        completed: false
+      }));
+
+      // Smart Warm-up Generator
+      const warmups: SetEntry[] = (m.warmups || []).map(w => ({
+        weight: parseInt(w.weight),
+        reps: parseInt(w.reps),
+        completed: false,
+        isWarmup: true
+      }));
+
       return {
         exercise: m.name,
         isSkill: isSkill,
-        sets: Array.from({ length: setsCount }).map(() => ({
-          weight: parseInt(m.prescribed?.replace(/\D/g, '') || "0"),
-          reps: parseInt(repsParts[1] || (m.reps?.includes('EMOM') ? "1" : "8")),
-          completed: false
-        }))
+        sets: [...warmups, ...workSets]
       };
     });
     setStrengthEntries(initial);
@@ -79,20 +88,13 @@ const LabView: React.FC<LabViewProps> = ({ workout, week, phase, user, isComplet
 
   const isRelationalComplete = () => {
     if (workout.type === WorkoutType.RECOVERY) return yogaDone;
-    
-    // Check if movements are done
     const strengthComplete = strengthEntries.every(e => e.sets.every(s => s.completed));
-    
-    // For MetCon or workouts with AMRAP/RFT, require round/rep input
     if (workout.type === WorkoutType.METCON || (workout.cardio && (workout.cardio.activity.includes('AMRAP') || workout.cardio.activity.includes('RFT')))) {
        return strengthComplete && (metconData.rounds > 0 || metconData.reps > 0);
     }
-
-    // For Endurance, require either Watch sync or manual distance
     if (workout.type === WorkoutType.ENDURANCE) {
        return (!!watchData || manualDistance !== '');
     }
-
     return strengthComplete;
   };
 
@@ -160,7 +162,7 @@ const LabView: React.FC<LabViewProps> = ({ workout, week, phase, user, isComplet
         </div>
       )}
 
-      <div className="glass-dark p-8 rounded-[44px] apple-shadow relative overflow-hidden border border-white/5">
+      <div className="glass-dark p-8 rounded-[44px] apple-shadow relative overflow-hidden border border-white/5 transition-all duration-500">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-500 via-purple-500 to-blue-500 opacity-50"></div>
         
         <div className="mb-8">
@@ -237,9 +239,14 @@ const LabView: React.FC<LabViewProps> = ({ workout, week, phase, user, isComplet
                              </button>
                           ) : (
                             <>
-                              <div className="flex-1 glass bg-white/[0.03] rounded-2xl px-5 py-3.5 flex items-center justify-between border-white/5 focus-within:border-orange-500/40 transition-all">
+                              <div className={`flex-1 glass bg-white/[0.03] rounded-2xl px-5 py-3.5 flex items-center justify-between border-white/5 focus-within:border-orange-500/40 transition-all ${set.isWarmup ? 'opacity-60 grayscale-[0.5]' : ''}`}>
                                 <div className="flex flex-col">
-                                  <span className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1">Set {sIdx + 1}</span>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[8px] font-black text-white/20 uppercase tracking-widest">
+                                      {set.isWarmup ? 'Warmup' : `Set ${sIdx + 1 - (entry.sets.filter(s => s.isWarmup).length)}`}
+                                    </span>
+                                    {set.isWarmup && <Sparkles size={10} className="text-blue-400" />}
+                                  </div>
                                   <input 
                                     type="number" 
                                     pattern="[0-9]*"
@@ -249,7 +256,13 @@ const LabView: React.FC<LabViewProps> = ({ workout, week, phase, user, isComplet
                                     className="bg-transparent text-xl font-black w-24 outline-none text-white focus:text-orange-500"
                                   />
                                 </div>
-                                <span className="text-[10px] font-black text-white/20 uppercase">LBS</span>
+                                <div className="flex items-center gap-4">
+                                  <div className="text-right">
+                                     <p className="text-[8px] font-black text-white/20 uppercase tracking-widest">Reps</p>
+                                     <p className="text-xs font-black">{set.reps}</p>
+                                  </div>
+                                  <span className="text-[10px] font-black text-white/20 uppercase">LBS</span>
+                                </div>
                               </div>
                               <button 
                                 onClick={() => toggleSet(mIdx, sIdx)}
@@ -330,7 +343,6 @@ const LabView: React.FC<LabViewProps> = ({ workout, week, phase, user, isComplet
                   <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">{workout.cardio.notes}</p>
                 </div>
 
-                {/* Only show distance input if not a pure round-based Metcon */}
                 {!(workout.cardio.activity.includes('AMRAP') || workout.cardio.activity.includes('RFT')) && (
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">

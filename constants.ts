@@ -42,7 +42,13 @@ export const getWorkoutForDay = (phase: PhaseType, week: number, day: string, pr
             description: "High volume focus. Strictly 3 min rest.",
             movements: [
               { name: "Warmup: Air Bike & Calisthenics", reps: "10 min", isSkill: true },
-              { name: "Low Bar Back Squat", prescribed: `${Math.round(profile.maxSquat * (isDeload ? 0.5 : 0.7)) + p1StrengthBonus} lbs`, reps: "3x8", rpe: 7 },
+              { 
+                name: "Low Bar Back Squat", 
+                prescribed: `${Math.round(profile.maxSquat * (isDeload ? 0.5 : 0.7)) + p1StrengthBonus} lbs`, 
+                reps: "3x8", 
+                rpe: 7,
+                warmups: [{ weight: "135", reps: "10" }, { weight: "185", reps: "5" }]
+              },
               { name: "DB Walking Lunges", prescribed: "35 lb DBs", reps: "3x12/leg" },
               { name: "Leg Extensions", reps: "3x15", rpe: 7 }
             ],
@@ -55,7 +61,12 @@ export const getWorkoutForDay = (phase: PhaseType, week: number, day: string, pr
             description: "Aerobic power and antagonist strength balance.",
             movements: [
               { name: "Warmup: Band Pull-aparts & Pushups", reps: "10 min", isSkill: true },
-              { name: "Bench Press", prescribed: `${Math.round(profile.maxBench * (isDeload ? 0.5 : 0.7)) + p1StrengthBonus} lbs`, reps: "3x8" },
+              { 
+                name: "Bench Press", 
+                prescribed: `${Math.round(profile.maxBench * (isDeload ? 0.5 : 0.7)) + p1StrengthBonus} lbs`, 
+                reps: "3x8",
+                warmups: [{ weight: "135", reps: "10" }, { weight: "155", reps: "5" }]
+              },
               { name: "Pendlay Row", prescribed: "135 lbs", reps: "3x10", notes: "Strict form, back parallel." },
               { name: "DB Overhead Press", prescribed: "40 lbs", reps: "3x10" },
               { name: "Face Pulls", reps: "3x15" }
@@ -127,7 +138,13 @@ export const getWorkoutForDay = (phase: PhaseType, week: number, day: string, pr
             description: "Absolute force production.",
             movements: [
               { name: "Box Jumps (Warmup)", reps: "3x5", isSkill: true },
-              { name: "Back Squat", prescribed: `${isDeload ? Math.round(p2SquatWeight * 0.7) : p2SquatWeight} lbs`, reps: "5x3", notes: "Rest 3-5 mins." },
+              { 
+                name: "Back Squat", 
+                prescribed: `${isDeload ? Math.round(p2SquatWeight * 0.7) : p2SquatWeight} lbs`, 
+                reps: "5x3", 
+                notes: "Rest 3-5 mins.",
+                warmups: [{ weight: "135", reps: "10" }, { weight: "225", reps: "5" }, { weight: "275", reps: "3" }]
+              },
               { name: "Deadlift", prescribed: `${isDeload ? 230 : 325} lbs`, reps: "3x3", notes: "Full reset every rep. No bouncing." },
               { name: "Bulgarian Split Squats", prescribed: "40 lbs", reps: "3x8/leg" }
             ]
@@ -198,7 +215,12 @@ export const getWorkoutForDay = (phase: PhaseType, week: number, day: string, pr
             type: WorkoutType.STRENGTH,
             description: "Peak neurological recruitment.",
             movements: [
-              { name: "Back Squat", prescribed: `${Math.round(targetWeight)} lbs`, reps: "Build to Heavy 2" }
+              { 
+                name: "Back Squat", 
+                prescribed: `${Math.round(targetWeight)} lbs`, 
+                reps: "Build to Heavy 2",
+                warmups: [{ weight: "135", reps: "10" }, { weight: "225", reps: "5" }, { weight: "275", reps: "3" }, { weight: "315", reps: "1" }]
+              }
             ],
             cardio: { activity: "Assault Bike Sprints", durationMinutes: 20, notes: "10 Rounds: 20s MAX / 1:40 rest." }
           };
@@ -216,7 +238,12 @@ export const getWorkoutForDay = (phase: PhaseType, week: number, day: string, pr
             type: WorkoutType.HYBRID,
             description: "Bench Press Single + CrossFit Fran.",
             movements: [
-              { name: "Bench Press", prescribed: `${Math.round(profile.maxBench * 0.95)} lbs`, reps: "Build to Single" },
+              { 
+                name: "Bench Press", 
+                prescribed: `${Math.round(profile.maxBench * 0.95)} lbs`, 
+                reps: "Build to Single",
+                warmups: [{ weight: "135", reps: "10" }, { weight: "185", reps: "5" }, { weight: "225", reps: "1" }]
+              },
               { name: "Thrusters", prescribed: "95 lbs", reps: "21-15-9" },
               { name: "Pull-ups", reps: "21-15-9" }
             ]

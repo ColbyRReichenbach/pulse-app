@@ -28,6 +28,11 @@ export interface UserProfile {
   startDate: string; // ISO string
 }
 
+export interface WarmupSet {
+  weight: string;
+  reps: string;
+}
+
 export interface Movement {
   name: string;
   prescribed?: string;
@@ -35,7 +40,8 @@ export interface Movement {
   sets?: number;
   rpe?: number;
   notes?: string;
-  isSkill?: boolean; // New: To distinguish skill/warmup from load-bearing sets
+  isSkill?: boolean;
+  warmups?: WarmupSet[]; // For Smart Warm-up Generator
 }
 
 export interface WorkoutSession {
@@ -52,10 +58,17 @@ export interface WorkoutSession {
   };
 }
 
+export interface SetEntry {
+  weight: number;
+  reps: number;
+  completed: boolean;
+  isWarmup?: boolean;
+}
+
 export interface StrengthEntry {
   exercise: string;
   isSkill: boolean;
-  sets: { weight: number; reps: number; completed: boolean }[];
+  sets: SetEntry[];
 }
 
 export interface CardioEntry {

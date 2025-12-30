@@ -1,8 +1,8 @@
 
-import { StrengthEntry, CardioEntry, MetConEntry, WorkoutLog, WorkoutType, PhaseType } from './types';
+import { StrengthEntry, CardioEntry, MetConEntry, WorkoutLog, WorkoutType, PhaseType, UserProfile } from './types';
 
 const DB_NAME = 'HybridPerformanceDB';
-const DB_VERSION = 2;
+const DB_VERSION = 3; // Incremented for profile store
 
 export interface SessionRecord {
   id: string; // YYYY-MM-DD
@@ -26,6 +26,7 @@ export class DatabaseService {
         if (!db.objectStoreNames.contains('strength_logs')) db.createObjectStore('strength_logs', { keyPath: 'id', autoIncrement: true }).createIndex('sessionId', 'sessionId');
         if (!db.objectStoreNames.contains('cardio_logs')) db.createObjectStore('cardio_logs', { keyPath: 'sessionId' });
         if (!db.objectStoreNames.contains('metcon_logs')) db.createObjectStore('metcon_logs', { keyPath: 'sessionId' });
+        if (!db.objectStoreNames.contains('profile')) db.createObjectStore('profile', { keyPath: 'id' });
       };
 
       request.onsuccess = () => {
@@ -34,6 +35,24 @@ export class DatabaseService {
       };
 
       request.onerror = () => reject(request.error);
+    });
+  }
+
+  async saveProfile(profile: UserProfile): Promise<void> {
+    if (!this.db) await this.init();
+    const tx = this.db!.transaction('profile', 'readwrite');
+    tx.objectStore('profile').put({ ...profile, id: 'current_user' });
+    return new Promise((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
+  async getProfile(): Promise<UserProfile | null> {
+    if (!this.db) await this.init();
+    return new Promise((resolve) => {
+      const request = this.db!.transaction('profile', 'readonly').objectStore('profile').get('current_user');
+      request.onsuccess = () => resolve(request.result || null);
     });
   }
 

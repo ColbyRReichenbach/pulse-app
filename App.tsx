@@ -38,21 +38,16 @@ const App: React.FC = () => {
     initDb();
   }, []);
 
-  const handleMainScroll = (e: React.UIEvent<HTMLElement>) => {
-    const scrollTop = e.currentTarget.scrollTop;
-    const threshold = 40;
-    if (scrollTop > threshold && !isNavMinimized) {
-      setIsNavMinimized(true);
-    } else if (scrollTop <= threshold && isNavMinimized) {
-      setIsNavMinimized(false);
-    }
+  // Robust Scroll Listener for Main UI
+  const handleScroll = (e: React.UIEvent<HTMLElement>) => {
+    const top = e.currentTarget.scrollTop;
+    if (top > 30 && !isNavMinimized) setIsNavMinimized(true);
+    if (top <= 30 && isNavMinimized) setIsNavMinimized(false);
   };
 
   useEffect(() => {
     setIsNavMinimized(false);
-    if (mainRef.current) {
-      mainRef.current.scrollTo({ top: 0, behavior: 'instant' });
-    }
+    if (mainRef.current) mainRef.current.scrollTo({ top: 0, behavior: 'instant' });
   }, [activeTab]);
 
   useEffect(() => {
@@ -160,22 +155,18 @@ const App: React.FC = () => {
     <div className={`flex flex-col h-screen max-w-lg mx-auto relative overflow-hidden bg-black selection:bg-orange-500/30 transition-colors duration-1000 ${phaseColorClass}`}>
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute top-[-20%] left-[-20%] w-[120%] h-[120%] opacity-20 mesh-bg blur-[100px]"></div>
-        <div className="absolute top-[-10%] left-[-10%] w-[100%] h-[70%] bg-white/5 blur-[150px] rounded-full animate-pulse"></div>
       </div>
 
       {prEvent && (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6 animate-in zoom-in-95 duration-500 pointer-events-none">
           <div className="glass-dark p-12 rounded-[50px] text-center space-y-4 border-orange-500/50 apple-shadow shadow-[0_0_100px_rgba(255,149,0,0.3)] bg-black/80 backdrop-blur-3xl">
-            <div className="w-24 h-24 bg-orange-500 rounded-full flex items-center justify-center mx-auto shadow-[0_0_40px_rgba(255,149,0,0.5)]">
-              <Star size={50} fill="white" className="text-white animate-spin-slow" />
+            <div className="w-24 h-24 bg-orange-500 rounded-full flex items-center justify-center mx-auto">
+              <Star size={50} fill="white" className="text-white" />
             </div>
             <div>
               <h2 className="text-[10px] font-black uppercase tracking-[0.5em] text-orange-500">New Personal Record</h2>
               <h3 className="text-4xl font-black tracking-tighter mt-2">{prEvent.exercise}</h3>
-              <p className="text-5xl font-black text-white mt-4">
-                {prEvent.exercise.includes('Mile') ? `${Math.floor(prEvent.weight / 60)}:${(prEvent.weight % 60).toString().padStart(2, '0')}` : prEvent.weight} 
-                <span className="text-lg text-white/40 uppercase ml-1">{prEvent.exercise.includes('Mile') ? 'MIN' : 'LBS'}</span>
-              </p>
+              <p className="text-5xl font-black text-white mt-4">{prEvent.weight}</p>
             </div>
           </div>
         </div>
@@ -183,30 +174,20 @@ const App: React.FC = () => {
       
       <main 
         ref={mainRef}
-        onScroll={handleMainScroll}
+        onScroll={handleScroll}
         className="flex-1 overflow-y-auto px-6 pt-16 pb-40 hide-scrollbar z-10 relative scroll-smooth transition-transform duration-500"
       >
         <header className="mb-6 flex justify-between items-start">
-          <div className="animate-in fade-in slide-in-from-left-4 duration-700">
+          <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className={`w-2.5 h-2.5 rounded-full ${activeTab === 'analytics' ? 'bg-indigo-500 shadow-[0_0_12px_#5856D6]' : 'bg-orange-500 shadow-[0_0_12px_#FF9500]'}`}></span>
-              <p className={`font-black tracking-[0.2em] text-[10px] uppercase ${activeTab === 'analytics' ? 'text-indigo-400' : 'text-orange-500'}`}>
-                {todayLabel}
-              </p>
+              <span className="w-2.5 h-2.5 rounded-full bg-orange-500 shadow-[0_0_12px_#FF9500]"></span>
+              <p className="font-black tracking-[0.2em] text-[10px] uppercase text-orange-500">{todayLabel}</p>
             </div>
-            <h1 className="text-4xl font-black tracking-tighter text-white leading-none mt-2 transition-all duration-300">
+            <h1 className="text-4xl font-black tracking-tighter text-white">
               {activeTab === 'lab' ? 'The Lab' : 
                activeTab === 'roadmap' ? 'Roadmap' : 
                activeTab === 'analytics' ? 'Insights' : 'Profile'}
             </h1>
-            <p className="text-white/30 text-[10px] font-black uppercase tracking-widest mt-1">
-              Week {currentWeek} • Phase {currentPhase}
-            </p>
-          </div>
-          <div className="w-12 h-12 rounded-2xl border border-white/10 glass flex items-center justify-center overflow-hidden shrink-0 shadow-2xl active:scale-90 transition-transform cursor-pointer">
-             <div className="w-full h-full bg-gradient-to-br from-indigo-500 via-purple-600 to-orange-500 flex items-center justify-center font-black text-sm text-white">
-                {user.name.charAt(0)}
-             </div>
           </div>
         </header>
 
@@ -218,7 +199,7 @@ const App: React.FC = () => {
           />
         )}
 
-        <div key={activeTab} className="animate-in fade-in slide-in-from-bottom-4 duration-500 spring-nav">
+        <div key={activeTab} className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           {activeTab === 'lab' && (
             <LabView 
               workout={currentWorkout} 

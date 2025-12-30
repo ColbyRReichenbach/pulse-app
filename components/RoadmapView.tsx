@@ -15,15 +15,14 @@ const PhaseCalendar: React.FC<PhaseCalendarProps> = ({ phase, profile, onClose, 
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   
   const handleInternalScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const scrollTop = e.currentTarget.scrollTop;
-    const threshold = 40;
-    onScroll(scrollTop > threshold);
+    const top = e.currentTarget.scrollTop;
+    onScroll(top > 30);
   };
 
   return (
-    <div className="fixed inset-0 z-[110] bg-black/95 backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-400 flex flex-col">
-      <div className="p-8 flex justify-between items-center border-b border-white/10 z-[115] glass shadow-2xl">
-        <div className="animate-in slide-in-from-left-4 duration-500">
+    <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-400 flex flex-col">
+      <div className="p-8 flex justify-between items-center border-b border-white/10 z-[210] glass">
+        <div>
           <h2 className="text-2xl font-black text-white tracking-tighter">{phase.name}</h2>
           <p className="text-[10px] uppercase font-black text-orange-500 tracking-[0.3em] mt-1">Operational Protocol</p>
         </div>
@@ -61,17 +60,12 @@ const PhaseCalendar: React.FC<PhaseCalendarProps> = ({ phase, profile, onClose, 
                        {m.name}
                      </span>
                    ))}
-                   {sampleWorkout.cardio && (
-                      <span className="text-[10px] font-bold bg-blue-500/10 px-3 py-1.5 rounded-xl border border-blue-500/10 text-blue-400">
-                        {sampleWorkout.cardio.activity}
-                      </span>
-                   )}
                  </div>
                </div>
             </div>
           );
         })}
-        <div className="h-32"></div> {/* Spacer for minimized icon */}
+        <div className="h-32"></div>
       </div>
     </div>
   );
@@ -103,20 +97,20 @@ const RoadmapView: React.FC<RoadmapViewProps> = ({ currentWeek, profile, complet
             key={phase.id} 
             onClick={() => setSelectedPhase(phase)}
             className={`glass p-6 rounded-[34px] border transition-all duration-300 relative overflow-hidden active:scale-[0.98] cursor-pointer group ${
-              isCurrent ? 'border-orange-500/40 bg-orange-500/5 shadow-[0_20px_40px_rgba(255,149,0,0.1)]' : 'border-white/5'
+              isCurrent ? 'border-orange-500/40 bg-orange-500/5' : 'border-white/5'
             }`}
           >
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-4">
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black transition-all duration-500 group-hover:scale-110 ${
-                  isPast ? 'bg-green-500 text-white shadow-[0_0_15px_rgba(34,197,94,0.3)]' : 
-                  isCurrent ? 'bg-orange-500 text-white shadow-[0_0_15px_rgba(249,115,22,0.3)]' : 
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black ${
+                  isPast ? 'bg-green-500 text-white' : 
+                  isCurrent ? 'bg-orange-500 text-white' : 
                   'bg-white/10 text-white/20'
                 }`}>
                   {isPast ? <CheckCircle2 size={24} /> : phase.id}
                 </div>
                 <div>
-                  <h3 className={`text-lg font-black tracking-tighter transition-colors ${isFuture ? 'text-white/40' : 'text-white'}`}>
+                  <h3 className={`text-lg font-black tracking-tighter ${isFuture ? 'text-white/40' : 'text-white'}`}>
                     {phase.name}
                   </h3>
                   <p className="text-[10px] text-white/30 font-black tracking-[0.2em] uppercase">Weeks {phase.weeks[0]}-{phase.weeks[1]}</p>
@@ -134,7 +128,6 @@ const RoadmapView: React.FC<RoadmapViewProps> = ({ currentWeek, profile, complet
                   </div>
                   <span className="text-[10px] font-black text-white/40">{completionPct}% COMPLETE</span>
                 </div>
-                <p className="text-[11px] text-white/50 leading-relaxed italic pr-8 line-clamp-2">"{phase.description}"</p>
                 <div className="w-full bg-white/5 h-2 rounded-full overflow-hidden">
                    <div className="bg-orange-500 h-full rounded-full transition-all duration-1000 ease-out" style={{ width: `${completionPct}%` }}></div>
                 </div>
@@ -158,14 +151,6 @@ const RoadmapView: React.FC<RoadmapViewProps> = ({ currentWeek, profile, complet
           onScroll={onSubViewScroll}
         />
       )}
-      
-      <div className="pt-12 text-center">
-        <div className="inline-block p-1 rounded-full bg-white/5 border border-white/5">
-          <div className="px-5 py-2.5 rounded-full bg-black/50 text-[10px] text-white/30 uppercase font-black tracking-[0.4em]">
-            Program End: Cycle 52
-          </div>
-        </div>
-      </div>
     </div>
   );
 };

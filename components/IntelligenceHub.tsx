@@ -55,16 +55,30 @@ const IntelligenceHub: React.FC<IntelligenceHubProps> = ({ user, history }) => {
         contents: `Athlete Query: ${userQuery}\n\nData Context: ${JSON.stringify(context)}`,
         config: {
           systemInstruction: `You are the HPP Elite Sports Scientist. Analyze athlete performance data and provide insights. 
-          Return ONLY JSON in this format: 
-          { 
-            "message": "Direct answer to the athlete's question", 
-            "chartType": "LINE" | "BAR" | "AREA" | null, 
-            "chartData": [{"label": "string", "value": number}] | null,
-            "recommendation": "A specific coaching advice based on the data",
-            "detectedTrend": "Positive" | "Negative" | "Warning" | "Neutral"
-          }
           Be clinical, encouraging, and data-driven. Focus on hybrid performance: how strength affects cardio and vice-versa.`,
-          responseMimeType: "application/json"
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              message: { type: Type.STRING, description: "Direct answer to the athlete's question" },
+              chartType: { type: Type.STRING, description: "Type of chart to display: LINE, BAR, or AREA (optional)" },
+              chartData: {
+                type: Type.ARRAY,
+                description: "Data for the chart (optional)",
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    label: { type: Type.STRING },
+                    value: { type: Type.NUMBER }
+                  },
+                  required: ["label", "value"]
+                }
+              },
+              recommendation: { type: Type.STRING, description: "A specific coaching advice based on the data" },
+              detectedTrend: { type: Type.STRING, description: "Positive, Negative, Warning, or Neutral" }
+            },
+            required: ["message", "recommendation", "detectedTrend"]
+          }
         }
       });
 
